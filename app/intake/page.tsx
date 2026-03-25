@@ -1053,13 +1053,14 @@ export default function IntakePage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [direction, setDirection] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitting, setSubmitting] = useState(false)
 
   const steps = computeSteps(state)
   const totalSteps = steps.length
   const sectionName = steps[currentStep] ?? ''
   const isConfirmation = sectionName === 'Confirmation'
 
-  const goNext = () => {
+  const goNext = async () => {
     const errs = validateStep(sectionName, state)
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
@@ -1069,8 +1070,22 @@ export default function IntakePage() {
     if (isConfirmation) return
 
     if (currentStep === steps.length - 2) {
-      // Moving to confirmation — log state
-      console.log('Intake form submission:', state)
+      // Submit to Supabase before showing confirmation
+      setSubmitting(true)
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state),
+        })
+        const data = await res.json()
+        if (!res.ok) console.error('Submit failed:', data.error)
+        else console.log('Submitted, client id:', data.id)
+      } catch (e) {
+        console.error('Submit error:', e)
+      } finally {
+        setSubmitting(false)
+      }
     }
 
     setDirection(1)
